@@ -70,15 +70,6 @@ public:
         return 0;
     }
 
-    // int SendOnSocket(const string message) {
-    //     if (send(server_fd, message.c_str(), strlen(message.c_str()), 0) < 0) {
-    //         cerr << "socket send error: " << strerror(errno) << endl;
-    //         return 1;
-    //     }
-
-    //     return 0;
-    // }
-
     ssize_t RecvSocket() {
         char buffer[128];
         ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
@@ -128,5 +119,4 @@ int main(int argc, char* argv[]) {
 
     afus.RecvSocket();
 
-    // afus.SendOnSocket("Hello from server!");
 }

@@ -51,16 +51,6 @@ public:
         return 0;
     }
 
-    // int ListenOnSocket() {
-    //     if (listen(sock_fd, 1) < 0) {
-    //         cerr << "socket bind error: " << strerror(errno) << endl;
-    //         // get errno
-    //         return sock_fd;
-    //     }
-
-    //     return 0;
-    // }
-
     int SendOnSocket(const string message) {
         if (send(sock_fd, message.c_str(), strlen(message.c_str()), 0) < 0) {
             cerr << "socket send error: " << strerror(errno) << endl;
@@ -69,18 +59,6 @@ public:
 
         return 0;
     }
-
-    // ssize_t RecvSocket() {
-    //     char buffer[128];
-    //     ssize_t bytes_received = recv(sock_fd, buffer, sizeof(buffer), 0);
-    //     if (bytes_received > 0) {
-    //         cout << "Server received: " << string(buffer, bytes_received) << endl;
-    //     } else {
-    //         cerr << "recv failed: " << bytes_received << ", " << strerror(errno) << endl;
-    //     }
-
-    //     return bytes_received;
-    // }
 };
 
 int main(int argc, char* argv[]) {
@@ -116,8 +94,5 @@ int main(int argc, char* argv[]) {
     afuc.SendOnSocket("Hello from client!");
 
     afuc.SendOnSocket("Hello from client 2!");
-
-    // afuc.ListenOnSocket();
-    // afuc.RecvSocket();
 
 }
