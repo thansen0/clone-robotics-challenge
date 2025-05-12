@@ -21,11 +21,11 @@ include_directories(include/)
 #add_subdirectory(client/)
 
 # build binaries
-add_executable(server server_src/server.cpp)
-add_executable(client client_src/client.cpp)
+add_executable(consumer server_src/server.cpp)
+add_executable(publisher client_src/client.cpp)
 
-target_include_directories(server PRIVATE server_src/)
-target_include_directories(client PRIVATE client_src/)
+target_include_directories(consumer PRIVATE server_src/)
+target_include_directories(publisher PRIVATE client_src/)
 
-target_link_libraries(server PRIVATE cxxopts)
-target_link_libraries(client PRIVATE cxxopts)
+target_link_libraries(consumer PRIVATE cxxopts)
+target_link_libraries(publisher PRIVATE cxxopts)

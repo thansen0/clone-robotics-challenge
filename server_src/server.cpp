@@ -3,33 +3,34 @@
 #include <sys/socket.h>
 #include <sys/un.h>         // sockaddr_un
 #include <errno.h>          // strerror(errno)
-#include <cxxopts.hpp>
-#include "transmission_header.hpp"
-
 #include <unistd.h>         // unlink, close
 #include <cstring>          // c_str()
+
+#include <cxxopts.hpp>
+#include "transmission_header.hpp"
 
 using namespace std;
 
 // server global variables
 static string socketPath;
 static string logLevel;
-static int frequencyHz;
+static int timeoutMs;
 
-class AFUnixServer {
+// server acts as consumer
+class AFUnixConsumer {
 private:
     string socketPath;
     string logLevel;
-    int frequencyHz;
+    int timeoutMs;
 
     int server_fd, client_fd;
     sockaddr_un addr;
 
 public:
-    AFUnixServer(string socketPath, string logLevel, int frequencyHz) : socketPath(socketPath), logLevel(logLevel), frequencyHz(frequencyHz) {
+    AFUnixConsumer(string socketPath, string logLevel, int timeoutMs) : socketPath(socketPath), logLevel(logLevel), timeoutMs(timeoutMs) {
     }
 
-    ~AFUnixServer() {
+    ~AFUnixConsumer() {
         close(server_fd);
         close(client_fd);
     }
@@ -90,7 +91,7 @@ int main(int argc, char* argv[]) {
     options.add_options()
         ("socket-path", "Path to socket", cxxopts::value<std::string>()->default_value("/tmp/dummy_socket"))
         ("log-level", "Logging level", cxxopts::value<std::string>()->default_value("INFO"))
-        ("frequency-hz", "Publish frequency in Hz", cxxopts::value<int>()->default_value("0"))
+        ("timeout-ms", "Timeout in ms", cxxopts::value<int>()->default_value("0"))
         ("h,help", "Print help");
 
     auto result = options.parse(argc, argv);
@@ -102,21 +103,21 @@ int main(int argc, char* argv[]) {
 
     socketPath = result["socket-path"].as<std::string>();
     logLevel = result["log-level"].as<std::string>();
-    frequencyHz = result["frequency-hz"].as<int>();
+    timeoutMs = result["timeout-ms"].as<int>();
 
     // print variables in lieu of debug
     std::cout << "Socket path: " << socketPath << "\n"
               << "Log level: " << logLevel << "\n"
-              << "Frequency Hz: " << frequencyHz << "\n";
+              << "Timeout ms: " << timeoutMs << "\n";
 
     // create server
-    AFUnixServer afus(socketPath, logLevel, frequencyHz);
-    afus.BindSocket();
+    AFUnixConsumer afuc(socketPath, logLevel, timeoutMs);
+    afuc.BindSocket();
 
-    afus.ListenOnSocket();
+    afuc.ListenOnSocket();
 
-    afus.RecvSocket();
+    afuc.RecvSocket();
 
-    afus.RecvSocket();
+    afuc.RecvSocket();
 
 }

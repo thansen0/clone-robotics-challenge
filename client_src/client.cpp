@@ -13,22 +13,23 @@ using namespace std;
 // server global variables
 static string socketPath;
 static string logLevel;
-static int timeoutMs;
+static int frequencyHz;
 
-class AFUnixClient {
+// client acts as publisher
+class AFUnixPublisher {
 private:
     string socketPath;
     string logLevel;
-    int timeoutMs;
+    int frequencyHz;
 
     int sock_fd;
     sockaddr_un addr;
 
 public:
-    AFUnixClient(string socketPath, string logLevel, int timeoutMs) : socketPath(socketPath), logLevel(logLevel), timeoutMs(timeoutMs) {
+    AFUnixPublisher(string socketPath, string logLevel, int frequencyHz) : socketPath(socketPath), logLevel(logLevel), frequencyHz(frequencyHz) {
     }
 
-    ~AFUnixClient() {
+    ~AFUnixPublisher() {
         close(sock_fd);
     }
 
@@ -68,7 +69,7 @@ int main(int argc, char* argv[]) {
     options.add_options()
         ("socket-path", "Path to socket", cxxopts::value<std::string>()->default_value("/tmp/dummy_socket"))
         ("log-level", "Logging level", cxxopts::value<std::string>()->default_value("INFO"))
-        ("timeout-ms", "Timeout in ms", cxxopts::value<int>()->default_value("0"))
+        ("frequency-hz", "Publish frequency in Hz", cxxopts::value<int>()->default_value("0"))
         ("h,help", "Print help");
 
     auto result = options.parse(argc, argv);
@@ -80,19 +81,19 @@ int main(int argc, char* argv[]) {
 
     socketPath = result["socket-path"].as<std::string>();
     logLevel = result["log-level"].as<std::string>();
-    timeoutMs = result["timeout-ms"].as<int>();
+    frequencyHz = result["frequency-hz"].as<int>();
 
     // print variables in lieu of debug
     std::cout << "Socket path: " << socketPath << "\n"
               << "Log level: " << logLevel << "\n"
-              << "Timeout ms: " << timeoutMs << "\n";
+              << "Frequency Hz: " << frequencyHz << "\n";
 
     // create connection 
-    AFUnixClient afuc(socketPath, logLevel, timeoutMs);
-    afuc.ConnectSocket();
+    AFUnixPublisher afup(socketPath, logLevel, frequencyHz);
+    afup.ConnectSocket();
 
-    afuc.SendOnSocket("Hello from client!");
+    afup.SendOnSocket("Hello from client!");
 
-    afuc.SendOnSocket("Hello from client 2!");
+    afup.SendOnSocket("Hello from client 2!");
 
 }
