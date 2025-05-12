@@ -1,4 +1,10 @@
 #include <iostream>
+#include <cstdlib>
+#include <sys/socket.h>
+#include <sys/un.h>         // sockaddr_un
+#include <errno.h>          // strerror(errno)
+#include <unistd.h>         // close
+
 #include <cxxopts.hpp>
 #include "transmission_header.hpp"
 
@@ -9,13 +15,80 @@ static string socketPath;
 static string logLevel;
 static int timeoutMs;
 
-int main(int argc, char* argv[]) {
-    cout << "Running client!" << endl;
+class AFUnixClient {
+private:
+    string socketPath;
+    string logLevel;
+    int timeoutMs;
 
-    cxxopts::Options options(argv[0], "Consumer Client");
+    int sock_fd;
+    sockaddr_un addr;
+
+public:
+    AFUnixClient(string socketPath, string logLevel, int timeoutMs) : socketPath(socketPath), logLevel(logLevel), timeoutMs(timeoutMs) {
+    }
+
+    ~AFUnixClient() {
+        close(sock_fd);
+    }
+
+    int ConnectSocket() {
+        sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+        if (sock_fd < 0) {
+            cerr << "socket failed: " << strerror(errno) << endl;
+            return 1;
+        }
+
+        sockaddr_un addr{};
+        addr.sun_family = AF_UNIX;
+        strncpy(addr.sun_path, socketPath.c_str(), sizeof(addr.sun_path) - 1);
+
+        if (connect(sock_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+            cerr << "connect failed: " << strerror(errno) << endl;
+            return 1;
+        }
+
+        return 0;
+    }
+
+    // int ListenOnSocket() {
+    //     if (listen(sock_fd, 1) < 0) {
+    //         cerr << "socket bind error: " << strerror(errno) << endl;
+    //         // get errno
+    //         return sock_fd;
+    //     }
+
+    //     return 0;
+    // }
+
+    int SendOnSocket(const string message) {
+        if (send(sock_fd, message.c_str(), strlen(message.c_str()), 0) < 0) {
+            cerr << "socket send error: " << strerror(errno) << endl;
+            return 1;
+        }
+
+        return 0;
+    }
+
+    // ssize_t RecvSocket() {
+    //     char buffer[128];
+    //     ssize_t bytes_received = recv(sock_fd, buffer, sizeof(buffer), 0);
+    //     if (bytes_received > 0) {
+    //         cout << "Server received: " << string(buffer, bytes_received) << endl;
+    //     } else {
+    //         cerr << "recv failed: " << bytes_received << ", " << strerror(errno) << endl;
+    //     }
+
+    //     return bytes_received;
+    // }
+};
+
+int main(int argc, char* argv[]) {
+    // add client args
+    cxxopts::Options options(argv[0], "Client");
 
     options.add_options()
-        ("socket-path", "Path to socket", cxxopts::value<std::string>())
+        ("socket-path", "Path to socket", cxxopts::value<std::string>()->default_value("/tmp/dummy_socket"))
         ("log-level", "Logging level", cxxopts::value<std::string>()->default_value("INFO"))
         ("timeout-ms", "Timeout in ms", cxxopts::value<int>()->default_value("0"))
         ("h,help", "Print help");
@@ -35,4 +108,16 @@ int main(int argc, char* argv[]) {
     std::cout << "Socket path: " << socketPath << "\n"
               << "Log level: " << logLevel << "\n"
               << "Timeout ms: " << timeoutMs << "\n";
+
+    // create connection 
+    AFUnixClient afuc(socketPath, logLevel, timeoutMs);
+    afuc.ConnectSocket();
+
+    afuc.SendOnSocket("Hello from client!");
+
+    afuc.SendOnSocket("Hello from client 2!");
+
+    // afuc.ListenOnSocket();
+    // afuc.RecvSocket();
+
 }
