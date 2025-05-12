@@ -8,26 +8,26 @@
 
 #include <cxxopts.hpp>
 #include "transmission_header.hpp"
+#include "simple_logger.hpp"
 
 using namespace std;
 
 // server global variables
 static string socketPath;
 static string logLevel;
-static int timeoutMs;
+static long long timeoutMs;
 
 // server acts as consumer
 class AFUnixConsumer {
 private:
     string socketPath;
     string logLevel;
-    int timeoutMs;
 
     int server_fd, client_fd;
     sockaddr_un addr;
 
 public:
-    AFUnixConsumer(string socketPath, string logLevel, int timeoutMs) : socketPath(socketPath), logLevel(logLevel), timeoutMs(timeoutMs) {
+    AFUnixConsumer(string socketPath, string logLevel, int timeoutMs) : socketPath(socketPath), logLevel(logLevel) {
     }
 
     ~AFUnixConsumer() {
@@ -39,7 +39,7 @@ public:
         // setup connection
         server_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
         if (server_fd < 0) {
-            cerr << "socket init error: " << strerror(errno) << endl;
+            Logger::error("socket init error: " + string(strerror(errno)));
             return server_fd;
         }
 
@@ -49,7 +49,7 @@ public:
         unlink(socketPath.c_str()); // deletes old socket path if it exists
 
         if (bind(server_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-            cerr << "socket bind error: " << strerror(errno) << endl;
+            Logger::error("socket bind error: " + string(strerror(errno)));
             return (1);
         }
 
@@ -58,13 +58,13 @@ public:
 
     int ListenOnSocket() {
         if (listen(server_fd, 1) < 0) {
-            cerr << "socket bind error: " << strerror(errno) << endl;
+            Logger::error("socket bind error: " + string(strerror(errno)));
             return server_fd;
         }
 
         client_fd = accept(server_fd, nullptr, nullptr);
         if (client_fd < 0) {
-            cerr << "socket accept error: " << strerror(errno) << endl;
+            Logger::error("socket accept error: " + string(strerror(errno)));
             return client_fd;
         }
 
@@ -72,12 +72,22 @@ public:
     }
 
     ssize_t RecvSocket() {
-        char buffer[128];
+        char buffer[256];
         ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+
         if (bytes_received > 0) {
-            cout << "Server received: " << string(buffer, bytes_received) << endl;
+            Logger::info("Server received: " + string(buffer, bytes_received));
+        } else if (bytes_received == 0) {
+            // rare, signifies broken connection
+            Logger::error("Client closed the connection.");
+            return 0;
         } else {
-            cerr << "recv failed: " << bytes_received << ", " << strerror(errno) << endl;
+            // common, includes timeouts and other trivial "errors"
+            Logger::error("recv failed: " + string(strerror(errno)));
+            if (errno == EPIPE || errno == ECONNRESET) {
+                Logger::error("Broken pipe or connection reset.");
+                return 0;
+            }
         }
 
         return bytes_received;
@@ -91,7 +101,7 @@ int main(int argc, char* argv[]) {
     options.add_options()
         ("socket-path", "Path to socket", cxxopts::value<std::string>()->default_value("/tmp/dummy_socket"))
         ("log-level", "Logging level", cxxopts::value<std::string>()->default_value("INFO"))
-        ("timeout-ms", "Timeout in ms", cxxopts::value<int>()->default_value("0"))
+        ("timeout-ms", "Timeout in ms", cxxopts::value<long long>()->default_value("1000"))
         ("h,help", "Print help");
 
     auto result = options.parse(argc, argv);
@@ -101,23 +111,61 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    // assign static global variables
     socketPath = result["socket-path"].as<std::string>();
     logLevel = result["log-level"].as<std::string>();
-    timeoutMs = result["timeout-ms"].as<int>();
+    timeoutMs = result["timeout-ms"].as<long long>();
 
-    // print variables in lieu of debug
-    std::cout << "Socket path: " << socketPath << "\n"
-              << "Log level: " << logLevel << "\n"
-              << "Timeout ms: " << timeoutMs << "\n";
+    // set logger level, NOTE: all incorrect logger levels are
+    // defaulted to INFO
+    Logger::setLevel(logLevel);
+
+    Logger::info("Socket path: " + socketPath);
+    Logger::info("Log level: " + logLevel);
+    Logger::info("Timeout ms: " + to_string(timeoutMs));
 
     // create server
     AFUnixConsumer afuc(socketPath, logLevel, timeoutMs);
     afuc.BindSocket();
 
-    afuc.ListenOnSocket();
+    if (0 != afuc.ListenOnSocket()) {
+        // error listening, exit program early.
+        Logger::error("Error in ListenOnSocket, exiting.");
+        exit(-1);
+    }
 
-    afuc.RecvSocket();
+    ssize_t status;
+    bool has_read = true;
+    chrono::_V2::steady_clock::time_point last_bad_read = chrono::steady_clock::now();
 
-    afuc.RecvSocket();
+    while (true) {
+        // receive on socket
+        status = afuc.RecvSocket();
+        if (status == 0) {
+            Logger::error("Error in RecvSocket, exiting.");
+            break;
+        } else if (!has_read && status < 0) {
+            // sets last bad read even if 
+            last_bad_read = chrono::steady_clock::now();
+            has_read = false;
+        } else if (status > 0) {
+            // success, read data
+            has_read = true;
 
+            // keep moving up on good reads
+            last_bad_read = chrono::steady_clock::now();
+        }
+
+        // check if timeout has been exceeded
+        long long time_diff = chrono::duration_cast<chrono::milliseconds>(
+                chrono::_V2::steady_clock::now() - last_bad_read
+        ).count();
+
+        if (time_diff > timeoutMs) {
+            Logger::error("Timeout exceeded, exiting");
+            break;
+        }
+    }
+
+    return 0;
 }

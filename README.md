@@ -4,7 +4,7 @@
 
 The application is split into two parts; a client and server. There is only one CMakeLists.txt file, which builds both binaries. Shared files (such as header definitions) are located in the `include/` folder.
 
-Data transmission is unidirectional from the publisher to consumer. 
+Data transmission is unidirectional from the publisher to consumer. Many things, such as unit testing were left out of the project as well, as I felt they were out of scope for a take home assignment.
 
 ## Building the project
 
