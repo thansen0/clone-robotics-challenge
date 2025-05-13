@@ -1,3 +1,14 @@
+/*
+ *     ___ _                      __       _           _   _          
+ *    / __\ | ___  _ __   ___    /__\ ___ | |__   ___ | |_(_) ___ ___ 
+ *   / /  | |/ _ \| '_ \ / _ \  / \/// _ \| '_ \ / _ \| __| |/ __/ __|
+ *  / /___| | (_) | | | |  __/ / _  \ (_) | |_) | (_) | |_| | (__\__ \
+ *  \____/|_|\___/|_| |_|\___| \/ \_/\___/|_.__/ \___/ \__|_|\___|___/
+ *                                                                  
+ *  Author: Thomas Hansen
+ *  Version: 0.0.1
+ */
+
 #include <iostream>
 #include <cstdlib>
 #include <thread>
@@ -11,6 +22,7 @@
 #include <cxxopts.hpp>
 #include "transmission_header.hpp"
 #include "simple_logger.hpp"
+#include "AFUnixPublisher.hpp"
 
 using namespace std;
 
@@ -18,62 +30,6 @@ using namespace std;
 static string socketPath;
 static string logLevel;
 static long long frequencyHz;
-
-// client acts as publisher
-class AFUnixPublisher {
-private:
-    string socketPath;
-    string logLevel;
-
-    int sock_fd;
-    sockaddr_un addr;
-
-public:
-    AFUnixPublisher(string socketPath, string logLevel) : socketPath(socketPath), logLevel(logLevel) {
-    }
-
-    ~AFUnixPublisher() {
-        close(sock_fd);
-    }
-
-    int ConnectSocket() {
-        sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-        if (sock_fd < 0) {
-            Logger::error("socket failed: " + string(strerror(errno)));
-            return 1;
-        }
-
-        sockaddr_un addr{};
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, socketPath.c_str(), sizeof(addr.sun_path) - 1);
-
-        if (connect(sock_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-            Logger::error("connect failed: " + string(strerror(errno)));
-            return 1;
-        }
-
-        return 0;
-    }
-
-    int SendOnSocket(const string message) {
-        if (send(sock_fd, message.c_str(), strlen(message.c_str()), 0) < 0) {
-            Logger::error("socket send error: " + string(strerror(errno)));
-            return 1;
-        }
-
-        return 0;
-    }
-
-    int SendOnSocket(const Payload_IMU_t* data) {
-        if (send(sock_fd, (const void*)data, sizeof(*data), 0) < 0) {
-            Logger::error("socket send error: " + string(strerror(errno)));
-            return 1;
-        }
-        Logger::info("Sent " + to_string(sizeof(*data)) + " bytes");
-
-        return 0;
-    }
-};
 
 void cli_args(int argc, char* argv[]) {
     // add client args
