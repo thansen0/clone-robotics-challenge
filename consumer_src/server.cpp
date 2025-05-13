@@ -75,7 +75,11 @@ public:
         ssize_t bytes_received = recv(client_fd, buffer, sizeof(Payload_IMU_t), 0);
 
         if (bytes_received > 0) {
-            Logger::info("Server received: " + to_string(bytes_received) + ", " + to_string(buffer->xAcc));
+            Logger::info("Server received: " + to_string(bytes_received));
+            if (bytes_received != sizeof(Payload_IMU_t)) {
+                // error reading, wrong number of bytes
+                return -1;
+            }
         } else if (bytes_received == 0) {
             // rare, signifies broken connection
             Logger::error("Client closed the connection.");
