@@ -16,8 +16,8 @@ cmake ../
 make -j
 
 # you may then run the pub/con as described in the PDF
-publisher --socket-path /tmp/test_path --log-level INFO --frequency-hz 500
 consumer --socket-path /tmp/test_path --log-level INFO --timeout-ms 100
+publisher --socket-path /tmp/test_path --log-level INFO --frequency-hz 500
 ```
 
 Log levels include `INFO`, `ERROR`, or `NONE`.

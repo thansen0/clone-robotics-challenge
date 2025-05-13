@@ -6,6 +6,7 @@
 #include <sys/un.h>         // sockaddr_un
 #include <errno.h>          // strerror(errno)
 #include <unistd.h>         // close
+#include <random>           // mt19937_64
 
 #include <cxxopts.hpp>
 #include "transmission_header.hpp"
@@ -62,9 +63,19 @@ public:
 
         return 0;
     }
+
+    int SendOnSocket(const Payload_IMU_t* data) {
+        if (send(sock_fd, (const void*)data, sizeof(*data), 0) < 0) {
+            Logger::error("socket send error: " + string(strerror(errno)));
+            return 1;
+        }
+        Logger::info("Sent " + to_string(sizeof(*data)) + " bytes");
+
+        return 0;
+    }
 };
 
-int main(int argc, char* argv[]) {
+void cli_args(int argc, char* argv[]) {
     // add client args
     cxxopts::Options options(argv[0], "Client");
 
@@ -78,13 +89,56 @@ int main(int argc, char* argv[]) {
 
     if (result.count("help")) {
         std::cout << options.help() << std::endl;
-        return 0;
+        exit(0);
     }
 
     // assign static global variables
     socketPath = result["socket-path"].as<std::string>();
     logLevel = result["log-level"].as<std::string>();
     frequencyHz = result["frequency-hz"].as<long long>();
+}
+
+Payload_IMU_t calcRandPayload() {
+    static mt19937_64 rng{ random_device{}() };
+
+    // AI suggested distributions
+    uniform_real_distribution<float> accDist(-4.0f, 4.0f);
+    uniform_int_distribution<int32_t> gyroDist(-25000, 25000);
+    uniform_real_distribution<float> magDist(-100.0f, 100.0f);
+
+    // fake time "reading" was taken
+    auto now_ms = static_cast<uint32_t>(
+        chrono::duration_cast<chrono::milliseconds>(
+            chrono::system_clock::now().time_since_epoch()
+        ).count()
+    );
+
+    Payload_IMU_t payload;
+    // accelerometer
+    payload.xAcc = accDist(rng);
+    payload.yAcc = accDist(rng);
+    payload.zAcc = accDist(rng);
+    payload.timestampAcc = now_ms;
+
+    // gyro
+    payload.xGyro = gyroDist(rng);
+    payload.yGyro = gyroDist(rng);
+    payload.zGyro = gyroDist(rng);
+    payload.timestampGyro = now_ms;
+
+    // magnetometer
+    payload.xMag = magDist(rng);
+    payload.yMag = magDist(rng);
+    payload.zMag = magDist(rng);
+    payload.timestampMag = now_ms;
+
+    return payload;
+}
+
+int main(int argc, char* argv[]) {
+    // read in command line arguments
+    cli_args(argc, argv);
+    
 
     // set logger level, NOTE: all incorrect logger levels are
     // defaulted to INFO
@@ -109,12 +163,16 @@ int main(int argc, char* argv[]) {
     afup.ConnectSocket();
 
     int status;
+    Payload_IMU_t cur_data;
 
     while (true) {
         // must set wake time first for accurate timing
         next_wake += wait_period;
+
+        // generate random IMU data for payload
+        cur_data = calcRandPayload();
         
-        status = afup.SendOnSocket("Hello from client!");
+        status = afup.SendOnSocket(&cur_data);
         if (status != 0) {
             // connection broken, exit
             break;

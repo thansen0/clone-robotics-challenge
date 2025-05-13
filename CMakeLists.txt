@@ -17,15 +17,12 @@ FetchContent_MakeAvailable(cxxopts)
 
 include_directories(include/)
 
-#add_subdirectory(server/)
-#add_subdirectory(client/)
-
 # build binaries
-add_executable(consumer server_src/server.cpp)
-add_executable(publisher client_src/client.cpp)
+add_executable(consumer consumer_src/server.cpp)
+add_executable(publisher publisher_src/client.cpp)
 
-target_include_directories(consumer PRIVATE server_src/)
-target_include_directories(publisher PRIVATE client_src/)
+target_include_directories(consumer PRIVATE consumer_src/)
+target_include_directories(publisher PRIVATE publisher_src/)
 
 target_link_libraries(consumer PRIVATE cxxopts)
 target_link_libraries(publisher PRIVATE cxxopts)

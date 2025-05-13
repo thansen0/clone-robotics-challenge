@@ -71,12 +71,11 @@ public:
         return 0;
     }
 
-    ssize_t RecvSocket() {
-        char buffer[256];
-        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+    ssize_t RecvSocket(Payload_IMU_t* buffer) {
+        ssize_t bytes_received = recv(client_fd, buffer, sizeof(Payload_IMU_t), 0);
 
         if (bytes_received > 0) {
-            Logger::info("Server received: " + string(buffer, bytes_received));
+            Logger::info("Server received: " + to_string(bytes_received) + ", " + to_string(buffer->xAcc));
         } else if (bytes_received == 0) {
             // rare, signifies broken connection
             Logger::error("Client closed the connection.");
@@ -94,8 +93,7 @@ public:
     }
 };
 
-int main(int argc, char* argv[]) {
-    // add server args
+void cli_args(int argc, char* argv[]) {
     cxxopts::Options options(argv[0], "Server");
 
     options.add_options()
@@ -108,13 +106,18 @@ int main(int argc, char* argv[]) {
 
     if (result.count("help")) {
         std::cout << options.help() << std::endl;
-        return 0;
+        exit(0);
     }
 
     // assign static global variables
     socketPath = result["socket-path"].as<std::string>();
     logLevel = result["log-level"].as<std::string>();
     timeoutMs = result["timeout-ms"].as<long long>();
+}
+
+int main(int argc, char* argv[]) {
+    // set command line args
+    cli_args(argc, argv);
 
     // set logger level, NOTE: all incorrect logger levels are
     // defaulted to INFO
@@ -137,10 +140,11 @@ int main(int argc, char* argv[]) {
     ssize_t status;
     bool has_read = true;
     chrono::_V2::steady_clock::time_point last_bad_read = chrono::steady_clock::now();
+    Payload_IMU_t buffer;
 
     while (true) {
         // receive on socket
-        status = afuc.RecvSocket();
+        status = afuc.RecvSocket(&buffer);
         if (status == 0) {
             Logger::error("Error in RecvSocket, exiting.");
             break;
