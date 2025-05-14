@@ -1,13 +1,12 @@
-/*
- *     ___ _                      __       _           _   _          
- *    / __\ | ___  _ __   ___    /__\ ___ | |__   ___ | |_(_) ___ ___ 
- *   / /  | |/ _ \| '_ \ / _ \  / \/// _ \| '_ \ / _ \| __| |/ __/ __|
- *  / /___| | (_) | | | |  __/ / _  \ (_) | |_) | (_) | |_| | (__\__ \
- *  \____/|_|\___/|_| |_|\___| \/ \_/\___/|_.__/ \___/ \__|_|\___|___/
- *                                                                  
- *  Author: Thomas Hansen
- *  Version: 0.0.1
- */
+//     ___ _                      __       _           _   _          
+//    / __\ | ___  _ __   ___    /__\ ___ | |__   ___ | |_(_) ___ ___ 
+//   / /  | |/ _ \| '_ \ / _ \  / \/// _ \| '_ \ / _ \| __| |/ __/ __|
+//  / /___| | (_) | | | |  __/ / _  \ (_) | |_) | (_) | |_| | (__\__ \
+//  \____/|_|\___/|_| |_|\___| \/ \_/\___/|_.__/ \___/ \__|_|\___|___/
+//                                                                  
+//  Author: Thomas Hansen
+//  Version: 0.0.1
+//
 
 #include <iostream>
 #include <cstdlib>
@@ -94,7 +93,6 @@ Payload_IMU_t calcRandPayload() {
 int main(int argc, char* argv[]) {
     // read in command line arguments
     cli_args(argc, argv);
-    
 
     // set logger level, NOTE: all incorrect logger levels are
     // defaulted to INFO
@@ -129,9 +127,9 @@ int main(int argc, char* argv[]) {
         cur_data = calcRandPayload();
         
         status = afup.SendOnSocket(&cur_data);
-        if (status != 0) {
-            // connection broken, exit
-            break;
+        if (status != SOCKET_SUCCESS) {
+            status = afup.ResetSocket();
+            Logger::info("Make sure the consumer is listening");
         }
 
         // sleep until next_wait time

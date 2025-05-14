@@ -20,6 +20,10 @@ consumer --socket-path /tmp/test_path --log-level INFO --timeout-ms 100
 publisher --socket-path /tmp/test_path --log-level INFO --frequency-hz 500
 ```
 
+Note the publisher is persistent, meaning it will attemt to reset itself without a consumer. The consumer, however, is not. This was a compromise between the consumer having a timeout (thus implying it is not persistent), while the publisher will exit after a broken connection due to its timeout.
+
+It is recommended you start the consumer first, then the publisher.
+
 Log levels include `INFO`, `ERROR`, or `NONE`.
 
 ## Design Choices
@@ -28,4 +32,4 @@ Much of the design was predetermined from the PDF (located in `docs/Coding_Task_
 
 I made a decision early on that I would not git clone anything as well; such that all libraries had to be downloaded in the CMakeLists.txt file (i.e. `FetchContent_Declare`) or standard in C++. I decided to use `cxxopts.hpp` since it is both common and easy to use, however I decided to write my own logger instead of something like g3log, simply because I felt it would be easier in the context of this project.
 
-My `static` global variables were also a bit of a tenuous design choice, as although I usually wouldn't write C++ programs this way I felt it was appropriate given the scope of the project.
+My `static` global variables were also a bit of a tenuous design choice, as although I usually wouldn't write C++ programs this way I felt it was appropriate given the scope of the project. Similarily 

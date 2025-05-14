@@ -10,6 +10,8 @@ AFUnixPublisher::AFUnixPublisher(string socketPath, string logLevel) : socketPat
 }
 
 AFUnixPublisher::~AFUnixPublisher() {
+    // we ignore the error value returned if the socket was never opened
+    // since we're closing the object anyways
     close(sock_fd);
 }
 
@@ -26,10 +28,10 @@ int AFUnixPublisher::ConnectSocket() {
 
     if (connect(sock_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
         Logger::error("connect failed: " + string(strerror(errno)));
-        return 1;
+        return SOCKET_ERROR;
     }
 
-    return 0;
+    return SOCKET_SUCCESS;
 }
 
 int AFUnixPublisher::SendOnSocket(const string message) {
@@ -38,15 +40,22 @@ int AFUnixPublisher::SendOnSocket(const string message) {
         return 1;
     }
 
-    return 0;
+    return SOCKET_SUCCESS;
 }
 
 int AFUnixPublisher::SendOnSocket(const Payload_IMU_t* data) {
     if (send(sock_fd, (const void*)data, sizeof(*data), 0) < 0) {
         Logger::error("socket send error: " + string(strerror(errno)));
-        return 1;
+        return SOCKET_ERROR;
     }
     Logger::info("Sent " + to_string(sizeof(*data)) + " bytes");
 
-    return 0;
+    return SOCKET_SUCCESS;
+}
+
+int AFUnixPublisher::ResetSocket() {
+    close(sock_fd);
+
+    // reconnect to socket
+    return this->ConnectSocket();
 }

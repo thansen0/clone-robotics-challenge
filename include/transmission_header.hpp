@@ -3,6 +3,10 @@
 
 #include <cstdint>
 
+// helpful error return values
+#define SOCKET_SUCCESS          (0)
+#define SOCKET_ERROR            (-1)
+
 typedef struct
 {
     float xAcc; // Acceleration [mg, g=9.81]

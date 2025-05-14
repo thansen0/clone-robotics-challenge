@@ -1,13 +1,12 @@
-/*
- *     ___ _                      __       _           _   _          
- *    / __\ | ___  _ __   ___    /__\ ___ | |__   ___ | |_(_) ___ ___ 
- *   / /  | |/ _ \| '_ \ / _ \  / \/// _ \| '_ \ / _ \| __| |/ __/ __|
- *  / /___| | (_) | | | |  __/ / _  \ (_) | |_) | (_) | |_| | (__\__ \
- *  \____/|_|\___/|_| |_|\___| \/ \_/\___/|_.__/ \___/ \__|_|\___|___/
- *                                                                  
- *  Author: Thomas Hansen
- *  Version: 0.0.1
- */
+//     ___ _                      __       _           _   _          
+//    / __\ | ___  _ __   ___    /__\ ___ | |__   ___ | |_(_) ___ ___ 
+//   / /  | |/ _ \| '_ \ / _ \  / \/// _ \| '_ \ / _ \| __| |/ __/ __|
+//  / /___| | (_) | | | |  __/ / _  \ (_) | |_) | (_) | |_| | (__\__ \
+//  \____/|_|\___/|_| |_|\___| \/ \_/\___/|_.__/ \___/ \__|_|\___|___/
+//                                                                  
+//  Author: Thomas Hansen
+//  Version: 0.0.1
+//
 
 #include <iostream>
 #include <cstdlib>
@@ -42,6 +41,7 @@ public:
     }
 
     ~AFUnixConsumer() {
+        // can fail if not initialized, but will simply return an error code
         close(server_fd);
         close(client_fd);
     }
@@ -51,7 +51,7 @@ public:
         server_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
         if (server_fd < 0) {
             Logger::error("socket init error: " + string(strerror(errno)));
-            return server_fd;
+            return SOCKET_ERROR;
         }
 
         this->addr = {};
@@ -61,27 +61,31 @@ public:
 
         if (bind(server_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
             Logger::error("socket bind error: " + string(strerror(errno)));
-            return (1);
+            return SOCKET_ERROR;
         }
 
-        return 0;
+        return SOCKET_SUCCESS;
     }
 
     int ListenOnSocket() {
         if (listen(server_fd, 1) < 0) {
             Logger::error("socket bind error: " + string(strerror(errno)));
-            return server_fd;
+            return SOCKET_ERROR;
         }
 
         client_fd = accept(server_fd, nullptr, nullptr);
         if (client_fd < 0) {
             Logger::error("socket accept error: " + string(strerror(errno)));
-            return client_fd;
+            return SOCKET_ERROR;
         }
 
-        return 0;
+        return SOCKET_SUCCESS;
     }
 
+    /* 
+     * Note: this directly returns the recv error values, not my custom macros,
+     * so that we can also get size
+     */
     ssize_t RecvSocket(Payload_IMU_t* buffer) {
         ssize_t bytes_received = recv(client_fd, buffer, sizeof(Payload_IMU_t), 0);
 
@@ -146,7 +150,7 @@ int main(int argc, char* argv[]) {
     AFUnixConsumer afuc(socketPath, logLevel, timeoutMs);
     afuc.BindSocket();
 
-    if (0 != afuc.ListenOnSocket()) {
+    if (SOCKET_SUCCESS != afuc.ListenOnSocket()) {
         // error listening, exit program early.
         Logger::error("Error in ListenOnSocket, exiting.");
         exit(-1);

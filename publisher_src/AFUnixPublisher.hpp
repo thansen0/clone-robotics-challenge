@@ -10,7 +10,7 @@ class AFUnixPublisher {
 private:
     string      socketPath;
     string      logLevel;
-    int         sock_fd;
+    int         sock_fd = -1;
     sockaddr_un addr;
 
 public:
@@ -20,6 +20,7 @@ public:
     int ConnectSocket();
     int SendOnSocket(const string message);
     int SendOnSocket(const Payload_IMU_t* data);
+    int ResetSocket();
 };
 
 #endif // AFUNIXPUBLISHER_HPP
