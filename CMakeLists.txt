@@ -18,7 +18,7 @@ FetchContent_MakeAvailable(cxxopts)
 include_directories(include/)
 
 # build binaries
-add_executable(consumer consumer_src/server.cpp)
+add_executable(consumer consumer_src/server.cpp consumer_src/AFUnixConsumer.cpp)
 add_executable(publisher publisher_src/client.cpp publisher_src/AFUnixPublisher.cpp)
 
 target_include_directories(consumer PRIVATE consumer_src/)
