@@ -62,6 +62,12 @@ int main(int argc, char* argv[]) {
     Logger::info("Log level: " + logLevel);
     Logger::info("Timeout ms: " + to_string(timeoutMs));
 
+    // sanity check, ignore upper bound
+    if (timeoutMs < 0) {
+        Logger::info("Timeout ms cannot be less than 0");
+        return -1;
+    }
+
     // create server
     AFUnixConsumer afuc(socketPath, logLevel);
     afuc.BindSocket();
@@ -100,7 +106,8 @@ int main(int argc, char* argv[]) {
                 chrono::_V2::steady_clock::now() - last_bad_read
         ).count();
 
-        if (time_diff > timeoutMs) {
+        // take abs incase timeout is negative
+        if (abs(time_diff) > timeoutMs) {
             Logger::error("Timeout exceeded, exiting");
             break;
         }

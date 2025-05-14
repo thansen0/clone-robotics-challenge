@@ -16,11 +16,11 @@ cmake ../
 make -j
 
 # you may then run the pub/con as described in the PDF
-consumer --socket-path /tmp/test_path --log-level INFO --timeout-ms 100
-publisher --socket-path /tmp/test_path --log-level INFO --frequency-hz 500
+./consumer --socket-path /tmp/test_path --log-level INFO --timeout-ms 100
+./publisher --socket-path /tmp/test_path --log-level INFO --frequency-hz 500
 ```
 
-It is recommended you start the `consumer` first, then the `publisher`. Note the publisher is persistent, meaning it will attempt to reset itself without a consumer. The consumer, however, is not. This was a compromise between the consumer having a timeout (thus implying it is not persistent), while the publisher will exit after a broken connection due to its timeout.
+It is recommended you start the `consumer` first, then the `publisher`. Note the publisher is persistent, meaning it will attempt to reset itself without a consumer. The consumer, however, is not. This was a compromise between the consumer having a timeout (thus implying it is not persistent), while the publisher will exit after a broken connection due to its timeout. One consideration here is that when given a bad input, such as socket path, the publisher won't exit, and will simply keep trying. 
 
 Log levels include `INFO`, `ERROR`, or `NONE`.
 
@@ -32,6 +32,6 @@ I made a decision early on that I would not git clone anything as well; such tha
 
 My `static` global variables were also a bit of a tenuous design choice, as although I usually wouldn't write C++ programs this way I felt it was appropriate given the scope of the project. Similarly while I'm a big fan of add_subdirectory in cmake, it felt like overkill for a take home project.
 
-## Running
+## Run Env
 
-I build and ran this project on Ubuntu 24.04. It should require no additional dependencies beyond basic C++17 programs.
+I build and ran this project on Ubuntu 24.04, although it should work on most linux systems.
